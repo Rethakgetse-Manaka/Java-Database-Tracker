@@ -2,7 +2,10 @@ import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
 import javax.swing.*;
+import javax.swing.event.*;
+
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 
 public class AWT extends Frame {
     private JTable StaffTable;
@@ -78,11 +81,11 @@ private JPanel createStaffTab(Connection conn){
     DefaultTableModel model = new DefaultTableModel();
     StaffTable = new JTable(model);
     tab1.add(new JScrollPane(StaffTable), BorderLayout.CENTER);
-
-
+    
     //Retrieve data from the database, Creating a statement and executing it
     try{
-        String sql = "SELECT s.first_name, s.last_name, a.address, a.address2, a.district, a.postal_code, a.phone, c.city, s.store_id, s.active FROM staff s"+
+        String sql = "SELECT s.first_name, s.last_name, a.address, a.address2,"+ 
+                    "a.district, a.postal_code, a.phone, c.city, s.store_id, s.active FROM staff s"+
                     " LEFT JOIN address a ON s.address_id = a.address_id"+
                     " LEFT JOIN store st ON s.store_id = st.store_id"+
                     " LEFT JOIN city c ON a.city_id = c.city_id";
@@ -106,6 +109,37 @@ private JPanel createStaffTab(Connection conn){
     }catch(Exception e){
         System.out.println("Error: " + e.getMessage());
     }
+    JPanel filterPanel = new JPanel(new BorderLayout());
+    JTextField filter = new JTextField("Type here to filter results");
+    filterPanel.add(filter, BorderLayout.CENTER);
+    tab1.add(filterPanel, BorderLayout.SOUTH);
+
+    //Filter implementation
+    filter.getDocument().addDocumentListener(new DocumentListener() {
+        @Override
+        public void insertUpdate(DocumentEvent e) {
+            applyFilter();
+        }
+
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+            applyFilter();
+        }
+
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+            applyFilter();
+        }
+
+        // Update the table based on the filter text
+        private void applyFilter() {
+            String filterText = filter.getText();
+            TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
+            StaffTable.setRowSorter(sorter);
+            sorter.setRowFilter(RowFilter.regexFilter("(?i)" + filterText));
+        }
+    });
+
     return tab1;
 }
 
