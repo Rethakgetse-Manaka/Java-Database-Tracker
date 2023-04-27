@@ -5,6 +5,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
 public class AWT extends Frame {
+    private JTable StaffTable;
   public AWT(){
     
     Connection conn = this.getConnection();
@@ -12,50 +13,8 @@ public class AWT extends Frame {
     JTabbedPane tabbedPane = new JTabbedPane();
         
     // Add the first tab
-    JPanel tab1 = new JPanel(new BorderLayout());
-    DefaultTableModel model = new DefaultTableModel();
-    JTable StaffTable = new JTable(model);
-    tab1.add(new JScrollPane(StaffTable), BorderLayout.CENTER);
-
-
-    //Retrieve data from the database, Creating a statement and executing it
-    try{
-        String sql = "Select staff_id,first_name,last_name,address_id,store_id,active from staff";
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(sql);
-        ResultSetMetaData rsmd = rs.getMetaData();
-
-        //Adding the columns to the table
-        int columnNumber = rsmd.getColumnCount();
-        for(int i=1;i<=columnNumber;i++){
-            String columnName = rsmd.getColumnName(i);
-            model.addColumn(columnName);
-        }
-        System.out.println(1);
-        while (rs.next()) {
-            Object[] row = new Object[columnNumber];
-            for(int i=1;i<=columnNumber;i++){
-                row[i-1] = rs.getString(i);
-            }
-            model.addRow(row);
-        }
-    }catch(Exception e){
-        System.out.println("Error: " + e.getMessage());
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-    
-    tabbedPane.addTab("Staff Tab", tab1);
+    JPanel StaffTab = createStaffTab(conn);
+    tabbedPane.addTab("Staff Tab", StaffTab);
     
     // Add the second tab
     JPanel tab2 = new JPanel();
@@ -113,6 +72,41 @@ public class AWT extends Frame {
     }
     
     return conn;
+}
+private JPanel createStaffTab(Connection conn){
+    JPanel tab1 = new JPanel(new BorderLayout());
+    DefaultTableModel model = new DefaultTableModel();
+    StaffTable = new JTable(model);
+    tab1.add(new JScrollPane(StaffTable), BorderLayout.CENTER);
+
+
+    //Retrieve data from the database, Creating a statement and executing it
+    try{
+        String sql = "SELECT s.first_name, s.last_name, a.address, a.address2, a.district, a.postal_code, a.phone, c.city, s.store_id, s.active FROM staff s"+
+                    " LEFT JOIN address a ON s.address_id = a.address_id"+
+                    " LEFT JOIN store st ON s.store_id = st.store_id"+
+                    " LEFT JOIN city c ON a.city_id = c.city_id";
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(sql);
+        ResultSetMetaData rsmd = rs.getMetaData();
+
+        //Adding the columns to the table
+        int columnNumber = rsmd.getColumnCount();
+        for(int i=1;i<=columnNumber;i++){
+            String columnName = rsmd.getColumnName(i);
+            model.addColumn(columnName);
+        }
+        while (rs.next()) {
+            Object[] row = new Object[columnNumber];
+            for(int i=1;i<=columnNumber;i++){
+                row[i-1] = rs.getString(i);
+            }
+            model.addRow(row);
+        }
+    }catch(Exception e){
+        System.out.println("Error: " + e.getMessage());
+    }
+    return tab1;
 }
 
   public static void main(String args[]){
