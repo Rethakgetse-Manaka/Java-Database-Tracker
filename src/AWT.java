@@ -2,6 +2,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 public class AWT extends Frame {
   public AWT(){
@@ -11,8 +12,49 @@ public class AWT extends Frame {
     JTabbedPane tabbedPane = new JTabbedPane();
         
     // Add the first tab
-    JPanel tab1 = new JPanel();
-    tab1.add(new JLabel("This is the first tab"));
+    JPanel tab1 = new JPanel(new BorderLayout());
+    DefaultTableModel model = new DefaultTableModel();
+    JTable StaffTable = new JTable(model);
+    tab1.add(new JScrollPane(StaffTable), BorderLayout.CENTER);
+
+
+    //Retrieve data from the database, Creating a statement and executing it
+    try{
+        String sql = "Select staff_id,first_name,last_name,address_id,store_id,active from staff";
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(sql);
+        ResultSetMetaData rsmd = rs.getMetaData();
+
+        //Adding the columns to the table
+        int columnNumber = rsmd.getColumnCount();
+        for(int i=1;i<=columnNumber;i++){
+            String columnName = rsmd.getColumnName(i);
+            model.addColumn(columnName);
+        }
+        System.out.println(1);
+        while (rs.next()) {
+            Object[] row = new Object[columnNumber];
+            for(int i=1;i<=columnNumber;i++){
+                row[i-1] = rs.getString(i);
+            }
+            model.addRow(row);
+        }
+    }catch(Exception e){
+        System.out.println("Error: " + e.getMessage());
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+    
     tabbedPane.addTab("Staff Tab", tab1);
     
     // Add the second tab
@@ -29,11 +71,11 @@ public class AWT extends Frame {
     tab4.add(new JLabel("This is the fourth tab"));
     tabbedPane.addTab("Films Tab", tab4);
     
-    add(tabbedPane);
     setSize(700, 600);
     setTitle("Database");
     setVisible(true);
     setLayout(new BorderLayout());
+    add(tabbedPane, BorderLayout.CENTER);
 
 
     
