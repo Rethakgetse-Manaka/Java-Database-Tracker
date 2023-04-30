@@ -29,9 +29,8 @@ public class AWT extends Frame {
     tab3.add(new JLabel("This is the third tab"));
     tabbedPane.addTab("Notifications Tab", tab3);
 
-    JPanel tab4 = new JPanel();
-    tab4.add(new JLabel("This is the fourth tab"));
-    tabbedPane.addTab("Films Tab", tab4);
+    JPanel FilmTab = createFilmTab(conn);
+    tabbedPane.addTab("Films Tab", FilmTab);
     
     setSize(700, 600);
     setTitle("Database");
@@ -76,6 +75,62 @@ public class AWT extends Frame {
     
     return conn;
 }
+
+
+private JPanel createFilmTab(Connection conn){
+    JPanel tab1 = new JPanel(new BorderLayout());
+    DefaultTableModel model = new DefaultTableModel();
+    StaffTable = new JTable(model);
+    tab1.add(new JScrollPane(StaffTable), BorderLayout.CENTER);
+    
+    //Retrieve data from the database, Creating a statement and executing it
+    try{
+        String sql = "Select * from film limit 10";
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(sql);
+        ResultSetMetaData rsmd = rs.getMetaData();
+
+        //Adding the columns to the table
+        int columnNumber = rsmd.getColumnCount();
+        for(int i=1;i<=columnNumber;i++){
+            String columnName = rsmd.getColumnName(i);
+            model.addColumn(columnName);
+        }
+        while (rs.next()) {
+            Object[] row = new Object[columnNumber];
+            for(int i=1;i<=columnNumber;i++){
+                row[i-1] = rs.getString(i);
+            }
+            model.addRow(row);
+        }
+    }catch(Exception e){
+        System.out.println("Error: " + e.getMessage());
+    }
+    JButton addButton = new JButton("Add Data");
+    addButton.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            JOptionPane pane = new JOptionPane();
+            JPanel addPanel = new JPanel();
+            // Add components to the addPanel for inputting new data
+            int option = pane.showConfirmDialog(null, addPanel, "Add New Data", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+            if (option == JOptionPane.OK_OPTION) {
+                // Add new data to the database and reload the table
+            }
+                    }
+    });
+    tab1.add(addButton, BorderLayout.SOUTH);
+    return tab1;
+}
+
+
+
+
+
+
+
+
+
 private JPanel createStaffTab(Connection conn){
     JPanel tab1 = new JPanel(new BorderLayout());
     DefaultTableModel model = new DefaultTableModel();
