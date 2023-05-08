@@ -90,7 +90,7 @@ private JPanel createFilmTab(Connection conn){
     
     //Retrieve data from the database, Creating a statement and executing it
     try{
-        String sql = "Select * from film limit 10";
+        String sql = "SELECT * FROM film ORDER BY film_id DESC LIMIT 10";
         Statement stmt = conn.createStatement();
         ResultSet rs = stmt.executeQuery(sql);
         ResultSetMetaData rsmd = rs.getMetaData();
@@ -115,13 +115,33 @@ private JPanel createFilmTab(Connection conn){
     addButton.addActionListener(new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e) {
-            AddFilmData(conn);
-                    }
+            AddFilmData(conn,model);
+            
+        }
     });
     tab1.add(addButton, BorderLayout.SOUTH);
     return tab1;
 }
-
+private void RefreshFilmTab(Connection conn,DefaultTableModel model){
+    model.setRowCount(0);
+    try{
+        String sql = "SELECT * FROM film ORDER BY film_id DESC LIMIT 10";
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(sql);
+        ResultSetMetaData rsmd = rs.getMetaData();
+        //Adding the columns to the table
+        int columnNumber = rsmd.getColumnCount();
+        while (rs.next()) {
+            Object[] row = new Object[columnNumber];
+            for(int i=1;i<=columnNumber;i++){
+                row[i-1] = rs.getString(i);
+            }
+            model.addRow(row);
+        }
+    }catch(Exception c){
+        System.out.println("Error: " + c.getMessage());
+    }
+}
 
 
 
@@ -172,7 +192,7 @@ private JPanel createStaffTab(Connection conn){
 
     return tab1;
 }
-private void AddFilmData(Connection conn){
+private void AddFilmData(Connection conn,DefaultTableModel model){
     JFrame AddMovie = new JFrame();
     AddMovie.setTitle("Add Movie");
     AddMovie.setSize(600, 600); 
@@ -273,16 +293,6 @@ private void AddFilmData(Connection conn){
     FeaturesPanel.add(BehindTheScenesCheckBox);
     panel.add(FeaturesPanel);
                                           
-    JPanel Last_Update = new JPanel();
-    DateFormat updateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); // Define the format for the timestamp
-    JFormattedTextField updateField = new JFormattedTextField(updateFormat); // Create a JFormattedTextField with the input format
-    updateField.setColumns(20); // Set the number of columns for the input field
-    updateField.setValue(new Date()); // Set the default value to the current date and time
-
-    Last_Update.add(new JLabel("Last Update:"));
-    Last_Update.add(updateField);
-    panel.add(Last_Update);
-                                          
     JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER)); // Create a panel with FlowLayout
 
     JButton cancelButton = new JButton("Cancel"); // Create a "Cancel" button
@@ -291,6 +301,7 @@ private void AddFilmData(Connection conn){
         public void actionPerformed(ActionEvent e) {
             // Code to execute when the "Cancel" button is clicked
             System.out.println("Cancel button clicked!");
+            AddMovie.dispose(); // Close the dialog
         }
     });
     buttonPanel.add(cancelButton); // Add the "Cancel" button to your panel
@@ -302,11 +313,46 @@ private void AddFilmData(Connection conn){
             // Code to execute when the "Add" button is clicked
             try{
                 String sql = "INSERT INTO film (title, description, release_year, language_id, original_language_id, rental_duration, rental_rate, length, replacement_cost, rating, special_features)"+
-                             "VALUES ('Dry', 'Words', 2022, 1, null, 6, 0.99, 86, 190.99, 'PG', 'Trailers')";
-                Statement stmt = conn.createStatement();
-                stmt.executeQuery(sql);
+                             "VALUES (?, ?, ?, ?, null, ?, ?, ?, ?, ?, ?)";
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setString(1, Title.getText());
+                stmt.setString(2, Description.getText());
+                stmt.setInt(3, (Integer) ReleaseYear.getValue());
+                stmt.setInt(4, LanguageID.getSelectedIndex()+1);
+                stmt.setInt(5, (Integer) RentDuration.getSelectedIndex()+1);
+                stmt.setDouble(6, ((Double) RentalRate.getValue()).doubleValue());
+                stmt.setInt(7, (Integer) MovieLength.getSelectedIndex()+1);
+                stmt.setDouble(8, ((Double) Cost.getValue()).doubleValue());
+                stmt.setString(9, (String) RatingBox.getSelectedItem());
+                String features = "";
+                if (TrailersCheckBox.isSelected()) {
+                    features += "Trailers";
+                }
+                if (CommentariesCheckBox.isSelected()) {
+                    if (!features.isEmpty()) {
+                        features += ",";
+                    }
+                    features += "Commentaries";
+                }
+                if (DeletedScenesCheckBox.isSelected()) {
+                    if (!features.isEmpty()) {
+                        features += ",";
+                    }
+                    features += "Deleted Scenes";
+                }
+                if (BehindTheScenesCheckBox.isSelected()) {
+                    if (!features.isEmpty()) {
+                        features += ",";
+                    }
+                    features += "Behind the Scenes";
+                }
+                stmt.setString(10, features);
+                System.out.println(features);
+                stmt.executeQuery();
+                RefreshFilmTab(conn, model);
+                AddMovie.dispose();
             }catch(Exception d){
-                System.out.println("Error");
+                System.out.println("Error:"+d);
             }
             
         }
