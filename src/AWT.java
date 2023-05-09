@@ -78,12 +78,15 @@ public class AWT extends Frame {
 
 
 
-    ReportTab.addMouseListener(new MouseAdapter() {
-    @Override
-        public void mouseClicked(MouseEvent e) {
-            // Do something when the tab is clicked
-            System.out.println("Tab clicked");
-            GenerateReport(conn,(DefaultTableModel)ReportTable.getModel());
+    tabbedPane.addChangeListener(new ChangeListener() {
+        @Override
+        public void stateChanged(ChangeEvent e) {
+            if (tabbedPane.getSelectedIndex() == 1) {
+                // Second tab is clicked
+                // Do something'
+                System.out.println("Second tab is clicked");
+                GenerateReport(conn, (DefaultTableModel)ReportTable.getModel());
+            }
         }
     });
    
@@ -559,8 +562,8 @@ private void RefreshNotificationTab(Connection conn,DefaultTableModel model){
 private JPanel createReportTab(Connection conn){
     JPanel tab1 = new JPanel(new BorderLayout());
     DefaultTableModel model = new DefaultTableModel();
-    StaffTable = new JTable(model);
-    tab1.add(new JScrollPane(StaffTable), BorderLayout.CENTER);
+    ReportTable = new JTable(model);
+    tab1.add(new JScrollPane(ReportTable), BorderLayout.CENTER);
 
     try{
         String sql = "SELECT s.store_id, c.name, COUNT(*) AS movie_count "+
@@ -597,15 +600,14 @@ private JPanel createReportTab(Connection conn){
 private void GenerateReport(Connection conn,DefaultTableModel model){
     model.setRowCount(0);
     try{
-        String sql = "SELECT s.store_name, g.genre_name, COUNT(*) AS movie_count "+
+        String sql = "SELECT s.store_id, c.name, COUNT(*) AS movie_count "+
                      "FROM inventory i "+
                      "LEFT JOIN film f ON i.film_id = f.film_id "+
                      "LEFT JOIN store s ON i.store_id = s.store_id "+
                      "LEFT JOIN film_category fc ON f.film_id = fc.film_id "+
                      "LEFT JOIN category c ON fc.category_id = c.category_id "+
-                     "LEFT JOIN genre g ON c.genre_id = g.genre_id "+
-                     "GROUP BY s.store_name, g.genre_name "+
-                     "ORDER BY s.store_name, g.genre_name ";
+                     "GROUP BY s.store_id, c.name "+
+                     "ORDER BY s.store_id, c.name";
         Statement stmt = conn.createStatement();
         ResultSet rs = stmt.executeQuery(sql);
         ResultSetMetaData rsmd = rs.getMetaData();
@@ -961,13 +963,46 @@ private JPanel createSubscribersTab(Connection conn){
     }catch(Exception e){
         System.out.println("Error: " + e.getMessage());
     }
+    JPanel mainPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+    JButton Unsubscribe = new JButton("Unsubscribe");
+    mainPanel.add(Unsubscribe);
+    Unsubscribe.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            // Code to execute when the "Unsubscribe" button is clicked
+            try{
+                int row = CustomerListTable.getSelectedRow();
+                String cell = model.getValueAt(row, 0).toString();
+                String sql = "Update customer_list SET notes=null WHERE ID = "+cell;
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setInt(1, Integer.parseInt((String) CustomerListTable.getValueAt(row, 0)));
+                stmt.executeQuery();
+                String SQL = "SELECT * from customer_list";
+                Statement statement = conn.createStatement();
+                ResultSet rs = statement.executeQuery(SQL);
+                ResultSetMetaData rsmd = rs.getMetaData();
+
+                //Adding the columns to the table
+                int columnNumber = rsmd.getColumnCount();
+                while (rs.next()) {
+                    Object[] ROW = new Object[columnNumber];
+                    for(int i=1;i<=columnNumber;i++){
+                        ROW[i-1] = rs.getString(i);
+                    }
+                    model.addRow(ROW);
+                }
+            }catch(Exception d){
+                System.out.println("Error:"+d);
+            }
+        }
+    });
     
     //Filter implementation
     JPanel filterPanel = new JPanel(new BorderLayout());
     JTextField filter = new JTextField("Search");
     filterPanel.add(filter, BorderLayout.CENTER);
     tab1.add(filterPanel, BorderLayout.SOUTH);
-
+    tab1.add(mainPanel,BorderLayout.NORTH);
     // create a TableRowSorter to filter the table
     TableRowSorter<TableModel> sorter = new TableRowSorter<>(model);
     CustomerListTable.setRowSorter(sorter);
@@ -994,7 +1029,7 @@ private JPanel createSubscribersTab(Connection conn){
             // do nothing
         }
     });
-
+    
     return tab1;
 }
   public static void main(String args[]){
