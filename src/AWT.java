@@ -66,6 +66,9 @@ public class AWT extends Frame {
 
     JPanel FilmTab = createFilmTab(conn);
     tabbedPane.addTab("Films Tab", FilmTab);
+
+    JPanel SubscribersTab = createSubscribersTab(conn);
+    tabbedPane.addTab("Subscribers",SubscribersTab);
     
     setSize(700, 600);
     setTitle("Database");
@@ -224,7 +227,7 @@ private void UpdateCustomer(Connection conn,DefaultTableModel model,JTable Table
         JOptionPane.showMessageDialog(null, "Customer to update not selected", "Error", JOptionPane.ERROR_MESSAGE);
     }else{
         JFrame UpdateCustomer = new JFrame();
-        UpdateCustomer.setTitle("Add Customer");
+        UpdateCustomer.setTitle("Update Customer Information");
         UpdateCustomer.setSize(600, 600); 
         
         JPanel panel = new JPanel();
@@ -261,24 +264,52 @@ private void UpdateCustomer(Connection conn,DefaultTableModel model,JTable Table
         activePanel.add(new JLabel("Active:"));
         activePanel.add(activeBox);
         panel.add(activePanel);
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER)); // Create a panel with FlowLayout
+    
+        JButton cancelButton = new JButton("Cancel"); // Create a "Cancel" button
+        cancelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Code to execute when the "Cancel" button is clicked
+                System.out.println("Cancel button clicked!");
+                UpdateCustomer.dispose(); // Close the dialog
+            }
+        });
+        buttonPanel.add(cancelButton); // Add the "Cancel" button to your panel
         
-        String cell = model.getValueAt(row, 0).toString();
-        String sql = "UPDATE customer SET first_name = ?, last_name = ?, email = ?, address_id = ?, active = ?, last_update = ? WHERE customer_id = " + cell;
-        try{
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, Name.getText());
-            stmt.setString(2, Surname.getText());
-            stmt.setString(3, Email.getText());
-            stmt.setString(4, Address.getText());
-            stmt.setInt(5, activeBox.getSelectedIndex());
-            LocalDateTime now = LocalDateTime.now();
-            Timestamp timestamp = Timestamp.valueOf(now);
-            stmt.setTimestamp(6, timestamp);
-            stmt.executeUpdate();
-            RefreshNotificationTab(conn,(DefaultTableModel)NotificationTable.getModel());
-        }catch(Exception f){
-            System.out.println("Error: " + f.getMessage());
-        }
+        JButton UpdateButton = new JButton("Update");
+        UpdateButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Code to execute when the "Update" button is clicked
+                System.out.println("Update button clicked!");
+                String cell = model.getValueAt(row, 0).toString();
+                String sql = "UPDATE customer SET first_name = ?, last_name = ?, email = ?, address_id = ?, active = ?, last_update = ? WHERE customer_id = " + cell;
+                try{
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setString(1, Name.getText());
+                stmt.setString(2, Surname.getText());
+                stmt.setString(3, Email.getText());
+                stmt.setString(4, Address.getText());
+                stmt.setInt(5, activeBox.getSelectedIndex());
+                LocalDateTime now = LocalDateTime.now();
+                Timestamp timestamp = Timestamp.valueOf(now);
+                stmt.setTimestamp(6, timestamp);
+                stmt.executeUpdate();
+                RefreshNotificationTab(conn,(DefaultTableModel)NotificationTable.getModel());
+                }catch(Exception f){
+                    System.out.println("Error: " + f.getMessage());
+                }
+                UpdateCustomer.dispose(); // Close the dialog
+            }
+        });
+        buttonPanel.add(UpdateButton); // Add the "Add" button to your panel
+        panel.add(buttonPanel); // Add the button panel to your main panel // Add the "Add" button to your panel
+        
+        UpdateCustomer.add(panel);
+        UpdateCustomer.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        UpdateCustomer.setLocationRelativeTo(null);
+        UpdateCustomer.setVisible(true);
     }
 
     return;
@@ -901,7 +932,71 @@ private void AddFilmData(Connection conn,DefaultTableModel model){
     AddMovie.setLocationRelativeTo(null);
     AddMovie.setVisible(true);
 }
+private JPanel createSubscribersTab(Connection conn){
+    JPanel tab1 = new JPanel(new BorderLayout());
+    DefaultTableModel model = new DefaultTableModel();
+    CustomerListTable = new JTable(model);
+    tab1.add(new JScrollPane(CustomerListTable), BorderLayout.CENTER);
+    
+    //Retrieve data from the database, Creating a statement and executing it
+    try{
+        String sql = "SELECT * from customer_list";
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(sql);
+        ResultSetMetaData rsmd = rs.getMetaData();
 
+        //Adding the columns to the table
+        int columnNumber = rsmd.getColumnCount();
+        for(int i=1;i<=columnNumber;i++){
+            String columnName = rsmd.getColumnName(i);
+            model.addColumn(columnName);
+        }
+        while (rs.next()) {
+            Object[] row = new Object[columnNumber];
+            for(int i=1;i<=columnNumber;i++){
+                row[i-1] = rs.getString(i);
+            }
+            model.addRow(row);
+        }
+    }catch(Exception e){
+        System.out.println("Error: " + e.getMessage());
+    }
+    
+    //Filter implementation
+    JPanel filterPanel = new JPanel(new BorderLayout());
+    JTextField filter = new JTextField("Search");
+    filterPanel.add(filter, BorderLayout.CENTER);
+    tab1.add(filterPanel, BorderLayout.SOUTH);
+
+    // create a TableRowSorter to filter the table
+    TableRowSorter<TableModel> sorter = new TableRowSorter<>(model);
+    CustomerListTable.setRowSorter(sorter);
+
+    // set the filter when the user types in the text field
+    filter.getDocument().addDocumentListener(new DocumentListener() {
+        @Override
+        public void insertUpdate(DocumentEvent e) {
+            String text = filter.getText();
+            if (text.trim().length() == 0) {
+                sorter.setRowFilter(null); // remove filter if empty
+            } else {
+                sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text)); // case-insensitive filter
+            }
+        }
+
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+            insertUpdate(e);
+        }
+
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+            // do nothing
+        }
+    });
+
+    return tab1;
+}
   public static void main(String args[]){
     new AWT();
   }
